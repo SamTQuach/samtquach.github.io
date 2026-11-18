@@ -43,7 +43,7 @@
         </p>
         <div class="actions">
           <a class="btn btn-red" href="mailto:Sam.t.q@protonmail.com?subject=Business%20Continuity%20opportunity">Email me</a>
-          <a class="btn btn-outline-light" href="https://www.linkedin.com/in/samtquach" target="_blank" rel="noopener">LinkedIn</a>
+          <a class="btn btn-linkedin" href="https://www.linkedin.com/in/samtquach" target="_blank" rel="noopener">LinkedIn</a>
         </div>
         <dl class="facts">
           <div><dt>Availability</dt><dd>From July 2027</dd></div>
@@ -59,7 +59,15 @@
           <svg class="story-arrows"></svg>
           <div class="callout" data-key="ff">75 firefighters</div>
           <div class="callout" data-key="surge">150+ surge<br>capacity</div>
-          <div class="callout" data-key="audit">Second-line<br>oversight</div>
+          <div class="callout" data-key="audit">Second-line<br>oversight
+            <ul class="callout-list">
+              <li>Risk assessments</li>
+              <li>Compliance self-audits and inspections</li>
+              <li>Emergency plan and procedure reviews</li>
+              <li>Remediation tracking of findings</li>
+              <li>Readiness certification boards (governance)</li>
+            </ul>
+          </div>
           <div class="callout" data-key="train">Training &amp;<br>exercises</div>
           <div class="callout" data-key="sar">Search &amp;<br>rescue</div>
           <div class="callout" data-key="mob">Man<br>overboard</div>
@@ -71,6 +79,7 @@
           <li data-ch="3"><span>04</span> Search &amp; rescue</li>
         </ol>
         <div class="scroll-hint" aria-hidden="true">Scroll<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
+        <a class="skip-story" href="#experience">Skip to experience<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6l5 5 5-5M7 13l5 5 5-5"/></svg></a>
       </div>
     </section>
 
@@ -132,7 +141,7 @@
               <div class="tl-left">
                 <p class="tl-when">May 2024 – Sep 2025</p>
                 <h4>Professional development and travel</h4>
-                <p class="tl-where">Europe and Asia</p>
+                <p class="tl-where">Europe, Asia, Africa and North America</p>
               </div>
               <span class="tl-node" aria-hidden="true"></span>
               <div class="tl-right">
@@ -140,6 +149,18 @@
                   <div><b>June 2025</b><span>Certified Business Continuity Professional, DRI International</span></div>
                   <div><b>28</b><span>countries in 8 months, solo</span></div>
                 </div>
+                <ol class="country-list" aria-label="The 28 countries">
+                  <li style="--i:0">Mexico</li><li style="--i:1">Philippines</li><li style="--i:2">Vietnam</li>
+                  <li style="--i:3">Malaysia</li><li style="--i:4">Singapore</li><li style="--i:5">Uzbekistan</li>
+                  <li style="--i:6">Azerbaijan</li><li style="--i:7">Georgia</li><li style="--i:8">Armenia</li>
+                  <li style="--i:9">Austria</li><li style="--i:10">Hungary</li><li class="de" style="--i:11">Germany</li>
+                  <li style="--i:12">Czechia</li><li style="--i:13">Poland</li><li style="--i:14">Lithuania</li>
+                  <li style="--i:15">Latvia</li><li style="--i:16">Estonia</li><li style="--i:17">Finland</li>
+                  <li style="--i:18">Netherlands</li><li style="--i:19">Türkiye</li><li style="--i:20">Bulgaria</li>
+                  <li style="--i:21">Serbia</li><li style="--i:22">Bosnia and Herzegovina + Republic of Srpska</li><li style="--i:23">Croatia</li>
+                  <li style="--i:24">Portugal</li><li style="--i:25">Spain</li><li style="--i:26">Morocco</li>
+                  <li style="--i:27">United Kingdom</li>
+                </ol>
               </div>
             </li>
 
@@ -311,7 +332,7 @@
         <div class="actions">
           <a class="btn btn-primary" href="mailto:Sam.t.q@protonmail.com?subject=Business%20Continuity%20opportunity">Email me</a>
           <button class="btn btn-outline copy-email" type="button" data-email="Sam.t.q@protonmail.com">Copy email address</button>
-          <a class="btn btn-outline" href="https://www.linkedin.com/in/samtquach" target="_blank" rel="noopener">Connect on LinkedIn</a>
+          <a class="btn btn-linkedin" href="https://www.linkedin.com/in/samtquach" target="_blank" rel="noopener">Connect on LinkedIn</a>
         </div>
         <ul class="contact-list">
           <li><span>Email</span> <a href="mailto:Sam.t.q@protonmail.com?subject=Business%20Continuity%20opportunity">Sam.t.q@protonmail.com</a></li>
@@ -338,6 +359,7 @@
       if (tl) {
         tl.classList.add('js');
         var items = tl.querySelectorAll('.tl-item');
+        var countries = tl.querySelectorAll('.country-list li');
         var spine = tl.querySelector('.tl-spine');
         var fill = tl.querySelector('.tl-fill');
         var ticking = false;
@@ -350,6 +372,10 @@
           for (var i = 0; i < items.length; i++) {
             var n = items[i].querySelector('.tl-node').getBoundingClientRect();
             items[i].classList.toggle('reached', n.top + n.height / 2 < line);
+          }
+          var reveal = window.innerHeight * 0.88;
+          for (var j = 0; j < countries.length; j++) {
+            countries[j].classList.toggle('in', countries[j].getBoundingClientRect().top < reveal);
           }
         };
         var request = function () { if (!ticking) { ticking = true; requestAnimationFrame(update); } };

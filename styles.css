@@ -130,6 +130,8 @@ a:hover { color: var(--accent-strong); }
 }
 .btn-red { background: #d11f27; color: #ffffff; border-color: #d11f27; }
 .btn-red:hover { background: #ff3b30; border-color: #ff3b30; color: #ffffff; }
+.btn-linkedin { background: #0a66c2; color: #ffffff; border-color: #0a66c2; }
+.btn-linkedin:hover { background: #004182; border-color: #004182; color: #ffffff; }
 .btn-outline-light { background: transparent; color: #ffffff; border-color: #ffffff; }
 .btn-outline-light:hover { background: #ffffff; color: var(--black); }
 .btn-primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
@@ -159,6 +161,14 @@ a:hover { color: var(--accent-strong); }
   opacity: 0; transition: opacity .35s ease; text-shadow: 0 1px 0 #000;
 }
 .callout.on { opacity: 1; }
+.callout-list {
+  list-style: none; margin: 14px 0 0; padding: 12px 14px; max-width: 330px;
+  background: rgba(14, 14, 14, 0.78); border-left: 3px solid #ffd400;
+  text-transform: none; letter-spacing: 0; font-size: clamp(13px, 1.25vw, 16px); font-weight: 400; line-height: 1.35; color: #ffffff;
+}
+.callout-list li { position: relative; padding-left: 14px; margin-bottom: 5px; }
+.callout-list li:last-child { margin-bottom: 0; }
+.callout-list li::before { content: ""; position: absolute; left: 0; top: 0.5em; width: 6px; height: 6px; background: #ffd400; }
 .callout[data-key="ff"] { left: 5%; top: 9%; }
 .callout[data-key="surge"] { right: 5%; bottom: 16%; text-align: right; }
 .callout[data-key="audit"] { left: 5%; top: 9%; }
@@ -183,6 +193,15 @@ a:hover { color: var(--accent-strong); }
 .scroll-hint.off { opacity: 0; }
 @keyframes nudge { 50% { transform: translateY(3px); } }
 @media (prefers-reduced-motion: reduce) { .scroll-hint svg { animation: none; } }
+
+.skip-story {
+  position: absolute; right: 20px; top: 18px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;
+  background: rgba(14, 14, 14, 0.75); color: #ffffff; border: 1px solid #555;
+  font-size: 0.88rem; font-weight: 600; text-decoration: none;
+}
+.skip-story:hover, .skip-story:focus-visible { color: #ffffff; border-color: #ffffff; background: #000; }
+.skip-story svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 
 .story.no-webgl { height: auto; }
 .story.no-webgl .story-stage { display: none; }
@@ -233,6 +252,24 @@ a:hover { color: var(--accent-strong); }
 .tl-roles { margin: 16px 0 0; padding-left: 12px; border-left: 2px solid var(--line); color: var(--muted); font-size: 0.92rem; line-height: 1.5; }
 .tl-stats + .tl-roles { margin-top: 18px; }
 .tl-right > .tl-roles:first-child { margin-top: 4px; }
+/* 28 countries: one long numbered column; each row slides in as it scrolls into view */
+.country-list {
+  list-style: none; margin: 20px 0 0; padding: 0; counter-reset: c; max-width: 360px;
+}
+.country-list li {
+  counter-increment: c; display: flex; gap: 10px; align-items: baseline;
+  padding: 9px 8px; border-bottom: 1px solid var(--line); font-size: 1rem; line-height: 1.3;
+}
+.country-list li::before {
+  content: counter(c, decimal-leading-zero); flex: none; width: 1.6em;
+  color: var(--muted); font-size: 0.75rem; font-variant-numeric: tabular-nums;
+}
+.country-list li.de { background: var(--accent); color: #ffffff; font-weight: 600; border-bottom-color: var(--accent); }
+.country-list li.de::before { color: rgba(255, 255, 255, 0.8); }
+.country-list li.de::after { content: "next home"; margin-left: auto; font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.9; }
+.tl.js .country-list li { opacity: 0; transform: translateY(24px); transition: opacity .45s ease, transform .45s ease; }
+.tl.js .country-list li.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .tl.js .country-list li { transform: none; transition: none; } }
 .tl-side .tl-left h4 { font-size: 1.3rem; }
 .tl-side .tl-node { width: 14px; height: 14px; margin-top: 7px; }
 .tl-side .tl-stats b { font-size: 1.7rem; }
@@ -297,13 +334,19 @@ a:hover { color: var(--accent-strong); }
   .job-dates { white-space: normal; }
   .chapters { gap: 4px 12px; font-size: 0.78rem; left: 16px; right: 90px; }
 
-  .tl-spine { left: 14px; }
-  .tl-item { grid-template-columns: 30px minmax(0, 1fr); column-gap: 14px; padding-bottom: 44px; }
-  .tl-node { grid-column: 1; grid-row: 1; }
-  .tl-left { grid-column: 2; grid-row: 1; text-align: left; }
-  .tl-right { grid-column: 2; grid-row: 2; margin-top: 14px; }
-  .tl-left h4 { font-size: 1.35rem; }
-  .tl-stats b { font-size: 1.8rem; }
+  /* keep the centered split on small screens; just tighten it */
+  .tl-item { grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr); padding-bottom: 40px; }
+  .tl-when { font-size: 0.68rem; letter-spacing: 0.03em; }
+  .tl-left h4 { font-size: 1.12rem; }
+  .tl-side .tl-left h4 { font-size: 1rem; }
+  .tl-where { font-size: 0.8rem; }
+  .tl-node { width: 16px; height: 16px; }
+  .tl-stats { gap: 12px; }
+  .tl-stats b, .tl-side .tl-stats b { font-size: 1.35rem; }
+  .tl-stats span { font-size: 0.8rem; }
+  .tl-roles { font-size: 0.78rem; padding-left: 8px; }
+  .country-list li { font-size: 0.8rem; padding: 7px 4px; gap: 6px; }
+  .country-list li.de::after { font-size: 0.58rem; }
 }
 @media (max-width: 520px) {
   .contact-list span { display: block; width: auto; }

@@ -1,4 +1,4 @@
-﻿// Scroll-driven 3D story:
+// Scroll-driven 3D story:
 //   1) Sam (blue, white helmet) at the north of 75 firefighters; camera pulls back to reveal 150+ surge
 //   2) walks to an audit desk and sits at a laptop with binders (second-line oversight)
 //   3) walks to a classroom and points at a screen in front of 20 students (training)
@@ -74,11 +74,13 @@ async function init() {
     return g;
   };
   // Firefighter helmet: dome, comb ridge, brim slightly longer at the back, front shield.
-  const helmetParts = (hex, shieldHex, y = 1.68) => [
-    colorize(new THREE.SphereGeometry(0.15, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 1.05, 1.06).translate(0, y, 0), hex),
-    colorize(new THREE.BoxGeometry(0.03, 0.04, 0.26).translate(0, y + 0.14, -0.01), hex),
-    colorize(new THREE.CylinderGeometry(0.205, 0.205, 0.022, 28).scale(1, 1, 1.15).translate(0, y + 0.005, -0.03), hex),
-    colorize(new THREE.BoxGeometry(0.1, 0.09, 0.02).rotateX(-0.45).translate(0, y + 0.08, 0.15), shieldHex),
+  // Sized for a 0.18 head (HK scales the original 0.125-head helmet up to match).
+  const HK = 1.42;
+  const helmetParts = (hex, shieldHex, y = 1.75) => [
+    colorize(new THREE.SphereGeometry(0.15 * HK, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 1.05, 1.06).translate(0, y, 0), hex),
+    colorize(new THREE.BoxGeometry(0.03 * HK, 0.04 * HK, 0.26 * HK).translate(0, y + 0.14 * HK, -0.01), hex),
+    colorize(new THREE.CylinderGeometry(0.205 * HK, 0.205 * HK, 0.022, 28).scale(1, 1, 1.15).translate(0, y + 0.005, -0.03 * HK), hex),
+    colorize(new THREE.BoxGeometry(0.1 * HK, 0.09 * HK, 0.02).rotateX(-0.45).translate(0, y + 0.08 * HK, 0.15 * HK), shieldHex),
   ];
   // Standing mannequin body (front = +z), arms at sides.
   const standingBody = (hex) => [
@@ -86,7 +88,7 @@ async function init() {
     limb(V(0.11, 0.1, 0), V(0.11, 0.84, 0), 0.095),
     limb(V(0, 1.42, 0), V(0, 1.52, 0), 0.06),
     new THREE.CapsuleGeometry(0.19, 0.36, 4, 14).scale(1, 1, 0.72).translate(0, 1.12, 0),
-    new THREE.SphereGeometry(0.125, 16, 12).translate(0, 1.65, 0),
+    new THREE.SphereGeometry(0.18, 16, 12).translate(0, 1.7, 0),
     limb(V(0.27, 1.36, 0), V(0.29, 0.82, 0), 0.066),
     limb(V(-0.27, 1.36, 0), V(-0.29, 0.82, 0), 0.066),
   ].map((g) => colorize(g, hex));
@@ -105,7 +107,7 @@ async function init() {
   // Navy boat crew: red body, orange life vest, grey boat helmet.
   const vestAndHelmet = (vestY, headY) => [
     colorize(new THREE.CapsuleGeometry(0.225, 0.3, 4, 14).scale(1, 1, 0.8).translate(0, vestY, 0), 0xf07c00),
-    colorize(new THREE.SphereGeometry(0.15, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 1.0, 1.06).translate(0, headY + 0.03, 0), 0x9a9a9a),
+    colorize(new THREE.SphereGeometry(0.205, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 1.0, 1.06).translate(0, headY + 0.1, 0), 0x9a9a9a),
   ];
   // Coxswain standing at the helm, hands forward on the console.
   function helmsmanGeo() {
@@ -115,7 +117,7 @@ async function init() {
       limb(V(0.13, 0.1, -0.05), V(0.11, 0.84, 0), 0.095),
       limb(V(0, 1.42, 0), V(0, 1.52, 0), 0.06),
       new THREE.CapsuleGeometry(0.19, 0.36, 4, 14).scale(1, 1, 0.72).translate(0, 1.12, 0),
-      new THREE.SphereGeometry(0.125, 16, 12).translate(0, 1.65, 0),
+      new THREE.SphereGeometry(0.18, 16, 12).translate(0, 1.7, 0),
       limb(V(0.27, 1.36, 0), V(0.25, 1.12, 0.22), 0.066), limb(V(0.25, 1.12, 0.22), V(0.14, 1.2, 0.48), 0.062),
       limb(V(-0.27, 1.36, 0), V(-0.25, 1.12, 0.22), 0.066), limb(V(-0.25, 1.12, 0.22), V(-0.14, 1.2, 0.48), 0.062),
     ].map((g) => colorize(g, R));
@@ -130,12 +132,12 @@ async function init() {
       limb(V(-0.12, 0.47, 0.42), V(-0.14, 0.08, 0.5), 0.085), limb(V(0.12, 0.47, 0.42), V(0.14, 0.08, 0.5), 0.085),
       new THREE.CapsuleGeometry(0.19, 0.36, 4, 14).scale(1, 1, 0.72).rotateX(0.18).translate(0, 0.76, 0.04),
       limb(V(0, 1.05, 0.08), V(0, 1.14, 0.1), 0.06),
-      new THREE.SphereGeometry(0.125, 16, 12).translate(0, 1.27, 0.12),
+      new THREE.SphereGeometry(0.18, 16, 12).translate(0, 1.32, 0.12),
       limb(V(0.27, 0.98, 0.06), V(0.27, 0.72, 0.2), 0.066), limb(V(0.27, 0.72, 0.2), V(0.16, 0.56, 0.4), 0.062),
       limb(V(-0.27, 0.98, 0.06), V(-0.27, 0.72, 0.2), 0.066), limb(V(-0.27, 0.72, 0.2), V(-0.16, 0.56, 0.4), 0.062),
     ].map((g) => colorize(g, R));
     p.push(colorize(new THREE.CapsuleGeometry(0.225, 0.3, 4, 14).scale(1, 1, 0.8).rotateX(0.18).translate(0, 0.81, 0.05), 0xf07c00));
-    p.push(colorize(new THREE.SphereGeometry(0.15, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 1.0, 1.06).translate(0, 1.3, 0.12), 0x9a9a9a));
+    p.push(colorize(new THREE.SphereGeometry(0.205, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 1.0, 1.06).translate(0, 1.36, 0.12), 0x9a9a9a));
     return mergeGeometries(p);
   }
   function studentGeo() {
@@ -145,7 +147,7 @@ async function init() {
       limb(V(-0.11, 0.5, 0.42), V(-0.11, 0.08, 0.45), 0.085), limb(V(0.11, 0.5, 0.42), V(0.11, 0.08, 0.45), 0.085),
       new THREE.CapsuleGeometry(0.19, 0.36, 4, 14).scale(1, 1, 0.72).translate(0, 0.76, 0),
       limb(V(0, 1.05, 0), V(0, 1.14, 0), 0.06),
-      new THREE.SphereGeometry(0.125, 16, 12).translate(0, 1.27, 0),
+      new THREE.SphereGeometry(0.18, 16, 12).translate(0, 1.32, 0),
       limb(V(0.27, 0.98, 0), V(0.3, 0.72, 0.14), 0.066), limb(V(0.3, 0.72, 0.14), V(0.2, 0.74, 0.42), 0.062),
       limb(V(-0.27, 0.98, 0), V(-0.3, 0.72, 0.14), 0.066), limb(V(-0.3, 0.72, 0.14), V(-0.2, 0.74, 0.42), 0.062),
     ].map((g) => colorize(g, S));
@@ -189,9 +191,56 @@ async function init() {
   scene.add(desk);
   const lid = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.28, 0.015), new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.4 }));
   lid.position.set(B.x, 0.93, B.z - 0.03); lid.rotation.x = -0.2; lid.castShadow = true;
-  const lcd = new THREE.Mesh(new THREE.PlaneGeometry(0.38, 0.24), new THREE.MeshBasicMaterial({ color: 0xcfe0ff }));
+  const canvasTex = (w, h, draw) => {
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    draw(cv.getContext('2d'), w, h);
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+  };
+  // Laptop: a BCM audit checklist
+  const lcdTex = canvasTex(512, 320, (g, w, h) => {
+    g.fillStyle = '#f4f6f9'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#d11f27'; g.fillRect(0, 0, w, 52);
+    g.fillStyle = '#fff'; g.font = '600 26px Arial'; g.fillText('BCM AUDIT CHECKLIST', 18, 35);
+    const rows = [['Business continuity plan current', 1], ['Business impact analysis reviewed', 1], ['Recovery time objectives met', 1], ['Exercise findings closed', 0], ['Training records complete', 1]];
+    rows.forEach(([txt, ok], i) => {
+      const y = 92 + i * 46;
+      g.strokeStyle = '#555'; g.lineWidth = 3; g.strokeRect(18, y - 22, 26, 26);
+      g.fillStyle = ok ? '#1a8f3c' : '#d11f27'; g.font = '600 26px Arial'; g.fillText(ok ? '✓' : '!', 22, y);
+      g.fillStyle = '#222'; g.font = '22px Arial'; g.fillText(txt, 58, y - 2);
+    });
+  });
+  const lcd = new THREE.Mesh(new THREE.PlaneGeometry(0.38, 0.24), new THREE.MeshBasicMaterial({ map: lcdTex }));
   lcd.position.set(0, 0, 0.009); lid.add(lcd);
   scene.add(lid);
+
+  // Wall board behind the desk: the business continuity management lifecycle
+  const boardTex = canvasTex(1024, 512, (g, w, h) => {
+    g.fillStyle = '#f7f7f7'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#111'; g.font = '600 40px Arial'; g.fillText('BUSINESS CONTINUITY MANAGEMENT', 36, 64);
+    g.fillStyle = '#d11f27'; g.fillRect(36, 82, 120, 6);
+    const steps = ['Governance & policy', 'Business impact analysis', 'Risk assessment', 'Continuity plans', 'Exercises & testing', 'Audit & improvement'];
+    const cx = w / 2, cy = 300, rx = 330, ry = 150;
+    steps.forEach((s, i) => {
+      const a = -Math.PI / 2 + i * (Math.PI * 2 / steps.length);
+      const x = cx + rx * Math.cos(a), y = cy + ry * Math.sin(a);
+      g.fillStyle = i === 5 ? '#d11f27' : '#111';
+      g.fillRect(x - 150, y - 28, 300, 56);
+      g.fillStyle = '#fff'; g.font = '600 24px Arial'; g.textAlign = 'center'; g.fillText(s, x, y + 8);
+      g.textAlign = 'left';
+    });
+    g.strokeStyle = '#d11f27'; g.lineWidth = 4; g.setLineDash([10, 8]);
+    g.beginPath(); g.ellipse(cx, cy, rx - 20, ry - 30, 0, 0, Math.PI * 2); g.stroke();
+  });
+  const board = new THREE.Group();
+  const boardFace = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.3), new THREE.MeshBasicMaterial({ map: boardTex }));
+  boardFace.position.set(0, 1.65, 0.05);
+  const boardFrame = new THREE.Mesh(mergeGeometries([
+    box(2.75, 1.45, 0.08, 0, 1.65, 0, 0x1e1e1e), box(0.08, 1.0, 0.08, -1.1, 0.5, 0, 0x1e1e1e), box(0.08, 1.0, 0.08, 1.1, 0.5, 0, 0x1e1e1e),
+  ]), vcMat);
+  boardFrame.castShadow = true;
+  board.add(boardFrame, boardFace);
+  board.position.set(B.x + 0.1, 0, B.z - 1.1);
+  scene.add(board);
   const CHAIR = V(B.x, 0, B.z + 0.72);
 
   // ---------- station C: classroom ----------
@@ -300,6 +349,38 @@ async function init() {
   const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1, 6), new THREE.MeshStandardMaterial({ color: 0x222222 }));
   scene.add(cable);
 
+  // Ship's deck crew deploying the RIB: davit operator, safety observer, two line handlers
+  // holding the bow and stern lines until the boat is waterborne.
+  const deckGeo = helmsmanGeo();
+  const deckCrew = [
+    { pos: V(EDGE - 1.6, 0, D_Z + 1.0), rot: Math.PI / 2 },        // davit operator, hands on the controls
+    { pos: V(EDGE - 3.0, 0, D_Z + 2.4), rot: Math.PI / 2 - 0.4 },  // safety observer
+    { pos: V(EDGE - 0.9, 0, D_Z - 3.4), rot: Math.PI / 2 + 0.35, line: V(0, 0.55, -2.9) }, // bow line
+    { pos: V(EDGE - 0.9, 0, D_Z + 3.4), rot: Math.PI / 2 - 0.35, line: V(0, 0.55, 2.9) },  // stern line
+  ];
+  const lineMat = new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.8 });
+  for (const c of deckCrew) {
+    const m = new THREE.Mesh(deckGeo, vcMat);
+    m.position.copy(c.pos); m.rotation.y = c.rot; m.castShadow = true;
+    scene.add(m);
+    if (c.line) {
+      m.updateMatrixWorld(true);
+      c.hand = m.localToWorld(V(0, 1.2, 0.5));
+      c.mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1, 6), lineMat);
+      scene.add(c.mesh);
+    }
+  }
+  const davitControl = new THREE.Mesh(mergeGeometries([box(0.35, 1.0, 0.3, 0, 0.5, 0, 0x55595e), box(0.05, 0.25, 0.05, 0, 1.12, 0.05, 0xd11f27)]), vcMat);
+  davitControl.position.set(EDGE - 1.05, 0, D_Z + 1.0); davitControl.castShadow = true;
+  scene.add(davitControl);
+  const yAxis = V(0, 1, 0), tmpA = V(), tmpB = V();
+  function stretch(mesh, a, b) {
+    const len = a.distanceTo(b);
+    mesh.scale.set(1, len, 1);
+    mesh.position.copy(a).add(b).multiplyScalar(0.5);
+    mesh.quaternion.setFromUnitVectors(yAxis, tmpA.copy(b).sub(a).normalize());
+  }
+
   const MOB = V(EDGE + 15, SEA_Y, D_Z - 13);
   const mob = new THREE.Group();
   mob.add(new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 12).translate(0, 0.36, 0), new THREE.MeshStandardMaterial({ color: 0xcfcfcf, roughness: 0.3 })));
@@ -331,9 +412,9 @@ async function init() {
   const pelvis = new THREE.Group(); leader.add(pelvis);
   mk(new THREE.CapsuleGeometry(0.19, 0.36, 4, 16).scale(1, 1, 0.72).translate(0, 0.24, 0), pelvis);
   mk(new THREE.CapsuleGeometry(0.06, 0.1, 3, 10).translate(0, 0.59, 0), pelvis);
-  mk(new THREE.SphereGeometry(0.125, 20, 14).translate(0, 0.77, 0), pelvis);
+  mk(new THREE.SphereGeometry(0.18, 20, 14).translate(0, 0.82, 0), pelvis);
   const lHelmet = mk(mergeGeometries(helmetParts(0xf4f4f4, 0x1f6fe5, 0)), pelvis, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.2, metalness: 0.05 }));
-  lHelmet.position.y = 0.8;
+  lHelmet.position.y = 0.87;
   const vest = mk(new THREE.CapsuleGeometry(0.225, 0.3, 4, 14).scale(1, 1, 0.8).translate(0, 0.29, 0), pelvis, new THREE.MeshStandardMaterial({ color: 0xf07c00, roughness: 0.4 }));
   const joints = {};
   for (const s of [-1, 1]) {
@@ -395,7 +476,7 @@ async function init() {
   // ---------- camera stations ----------
   const camA0 = { t: V(0, 0.9, 5.2), dir: V(0.12, 0.42, 0.9).normalize(), dist: 21, need: 12 };
   const camA = { t: V(0, 0, 11.5), dir: V(0.12, 0.8, 0.59).normalize(), dist: 58, need: 34 };
-  const camB = { t: V(B.x + 0.1, 0.8, B.z + 0.2), dir: V(0.5, 0.58, 0.64).normalize(), dist: 6.2, need: 4.2 };
+  const camB = { t: V(B.x + 0.1, 1.15, B.z - 0.2), dir: V(0.42, 0.42, 0.8).normalize(), dist: 7.2, need: 4.6 };
   const camC = { t: V(C.x + 0.2, 0.9, C.z), dir: V(0.48, 0.6, 0.64).normalize(), dist: 17, need: 11 };
   const camD1 = { t: V(EDGE + 1.2, -2.0, D_Z), dir: V(0.75, 0.42, 0.54).normalize(), dist: 18, need: 9 };
   const camD2 = { t: V(EDGE + 9, SEA_Y + 0.5, D_Z - 7.5), dir: V(0.3, 0.62, 0.73).normalize(), dist: 30, need: 20 };
@@ -559,6 +640,14 @@ async function init() {
     cable.visible = R.lower < 1;
     cable.scale.y = Math.max(DAVIT_TIP.y - hookY, 0.01);
     cable.position.set(DAVIT_TIP.x, (DAVIT_TIP.y + hookY) / 2, D_Z + 0.9);
+    // handling lines stay attached until the RIB gets under way
+    rib.updateMatrixWorld(true);
+    const linesOn = p < K.drive[0] + 0.01;
+    for (const c of deckCrew) {
+      if (!c.mesh) continue;
+      c.mesh.visible = linesOn;
+      if (linesOn) stretch(c.mesh, c.hand, rib.localToWorld(tmpB.copy(c.line)));
+    }
     mob.position.set(MOB.x, SEA_Y + wave(MOB.x, MOB.z, seaT) * 0.9, MOB.z);
 
     const L = leaderState(p, R);
