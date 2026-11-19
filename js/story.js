@@ -18,7 +18,9 @@ async function init() {
   const canvas = stage.querySelector('canvas');
   const arrowsSvg = stage.querySelector('.story-arrows');
   const hint = stage.querySelector('.scroll-hint');
-  const chapterEls = [...stage.querySelectorAll('.chapters li')];
+  const chapterEls = [...stage.querySelectorAll('.chapters button')];
+  const hintText = hint.querySelector('.hint-text');
+  const progressBar = stage.querySelector('.story-progress i');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ---------- renderer / scene ----------
@@ -93,16 +95,23 @@ async function init() {
     limb(V(-0.27, 1.36, 0), V(-0.29, 0.82, 0), 0.066),
   ].map((g) => colorize(g, hex));
 
+  // Firefighter in gold turnout gear: red helmet with gold shield, grey air tank, silver reflective bands.
+  // Arms are a separate instanced mesh (pivoting at the shoulder) so they can swing while the teams move.
   function firefighterGeo() {
-    const p = standingBody(0xd11f27);
-    p.push(...helmetParts(0xf2c200, 0x151515));
+    const p = standingBody(0xc9a13b).slice(0, 5); // legs, neck, torso, head (no arms)
+    p.push(...helmetParts(0xd11f27, 0xf2c200));
     p.push(colorize(new THREE.CapsuleGeometry(0.085, 0.4, 3, 12).translate(0, 1.16, -0.225), 0xbdbdbd));
     p.push(...[
       band(0.104, -0.11, 0.34, 0), band(0.104, 0.11, 0.34, 0),
-      band(0.076, 0.285, 1.0, 0), band(0.076, -0.285, 1.0, 0),
-      band(0.2, 0, 1.0, 0, 0.74),
-    ].map((g) => colorize(g, 0xf2d43a)));
+      band(0.2, 0, 1.0, 0, 0.74), band(0.2, 0, 0.86, 0, 0.74),
+    ].map((g) => colorize(g, 0xeeeeee)));
     return mergeGeometries(p);
+  }
+  function firefighterArmGeo() {
+    return mergeGeometries([
+      colorize(limb(V(0, 0, 0), V(0.02, -0.54, 0), 0.066), 0xc9a13b),
+      colorize(band(0.076, 0.012, -0.36, 0), 0xeeeeee),
+    ]);
   }
   // Navy boat crew: red body, orange life vest, grey boat helmet.
   const vestAndHelmet = (vestY, headY) => [
@@ -167,8 +176,34 @@ async function init() {
   const crewPos = [];
   for (let r = 0; r < 5; r++) for (let c = 0; c < COLS; c++) crewPos.push({ x: (c - 7) * SP, z: 2 + r * SP, delay: r * 0.14 + Math.abs(c - 7) * 0.012 });
   for (let r = 0; r < 10; r++) for (let c = 0; c < COLS; c++) crewPos.push({ x: (c - 7) * SP, z: 12.6 + r * SP, row: r, surge: true });
-  const surgeTint = new THREE.Color(0.55, 0.55, 0.55), full = new THREE.Color(1, 1, 1);
-  crewPos.forEach((p, i) => crew.setColorAt(i, p.surge ? surgeTint : full));
+  // Teams of 5 (each column of the 75; each half-column of the surge) deploy outward in different directions
+  // once the leader walks off.
+  // Each team gathers into a tight cluster (offsets around its centre) as it moves off.
+  const CLUSTER = [[0, 0], [0.62, 0.42], [-0.62, 0.42], [0.45, -0.55], [-0.45, -0.55]];
+  const teamCount = {};
+  crewPos.forEach((c, i) => {
+    const col = i % COLS;
+    c.team = c.surge ? 15 + col * 2 + (c.row < 5 ? 0 : 1) : col;
+    c.k = teamCount[c.team] = (teamCount[c.team] ?? -1) + 1;
+  });
+  const teamInfo = [];
+  for (let t = 0; t < 45; t++) {
+    const members = crewPos.filter((c) => c.team === t);
+    const cx = members.reduce((s, c) => s + c.x, 0) / members.length, cz = members.reduce((s, c) => s + c.z, 0) / members.length;
+    const base = Math.atan2(cx, cz - 13);
+    const ang = base + Math.sin(t * 2.39996) * 0.9;
+    const dist = 9 + (t % 5) * 3.2;
+    teamInfo.push({ cx, cz, dx: Math.sin(ang) * dist, dz: Math.cos(ang) * dist, rot: ang, delay: (t % 7) * 0.003 });
+  }
+  const surgeTint = new THREE.Color(0.62, 0.62, 0.62), full = new THREE.Color(1, 1, 1);
+  const armGeo = firefighterArmGeo();
+  const arms = [-1, 1].map((side) => {
+    const m = new THREE.InstancedMesh(armGeo, vcMat, crewPos.length);
+    m.castShadow = true; m.userData.side = side; scene.add(m);
+    return m;
+  });
+  crewPos.forEach((p, i) => { const c = p.surge ? surgeTint : full; crew.setColorAt(i, c); arms.forEach((a) => a.setColorAt(i, c)); });
+  const mArm = new THREE.Matrix4(), mTmp = new THREE.Matrix4();
 
   // ---------- station B: audit desk ----------
   const B = V(30, 0, -6);
@@ -474,20 +509,32 @@ async function init() {
   const STRIDE = 0.72;
 
   // ---------- camera stations ----------
-  const camA0 = { t: V(0, 0.9, 5.2), dir: V(0.12, 0.42, 0.9).normalize(), dist: 21, need: 12 };
+  // A0: eye level from inside the formation (between rows 1-2, columns 7-8), looking past a few firefighters to the leader.
+  const camA0 = { t: V(0, 1.3, -4), dir: V(0.95, 0.4, 8.85).normalize(), dist: 8.9, need: 2 };
+  // D0: close on the leader at the deck edge and in the RIB, before pulling back to reveal the ship and sea.
+  const camD0 = { t: V(EDGE + 1.3, 1.2, D_Z - 0.4), dir: V(0.75, 0.42, 0.54).normalize(), dist: 5.5, need: 3 };
   const camA = { t: V(0, 0, 11.5), dir: V(0.12, 0.8, 0.59).normalize(), dist: 58, need: 34 };
   const camB = { t: V(B.x + 0.1, 1.15, B.z - 0.2), dir: V(0.42, 0.42, 0.8).normalize(), dist: 7.2, need: 4.6 };
   const camC = { t: V(C.x + 0.2, 0.9, C.z), dir: V(0.48, 0.6, 0.64).normalize(), dist: 17, need: 11 };
-  const camD1 = { t: V(EDGE + 1.2, -2.0, D_Z), dir: V(0.75, 0.42, 0.54).normalize(), dist: 18, need: 9 };
-  const camD2 = { t: V(EDGE + 9, SEA_Y + 0.5, D_Z - 7.5), dir: V(0.3, 0.62, 0.73).normalize(), dist: 30, need: 20 };
+  // The boat shots all look from the sea side at the ship's flank along one direction: the camera only pulls straight back.
+  const SIDE = V(0.75, 0.42, 0.54).normalize();
+  const camD1 = { t: V(EDGE + 1.2, -2.0, D_Z), dir: SIDE, dist: 18, need: 9 };
+  const camD2 = { t: V(EDGE + 7, SEA_Y + 0.5, D_Z - 5), dir: SIDE, dist: 32, need: 20 };
 
   // ---------- timeline (p = scroll progress 0..1) ----------
   const ease = (t) => { t = Math.min(Math.max(t, 0), 1); return t * t * (3 - 2 * t); };
   const span = (p, a, b) => Math.min(Math.max((p - a) / (b - a), 0), 1);
   const K = {
-    zoom: [0.06, 0.15], walk1: [0.2, 0.32], sit: [0.32, 0.35], up: [0.42, 0.44], walk2: [0.44, 0.56], point: [0.56, 0.6],
-    walk3: [0.66, 0.74], hop: [0.74, 0.78], lower: [0.79, 0.86], drive: [0.86, 0.97],
+    zoom: [0.04, 0.18], walk1: [0.22, 0.32], sit: [0.32, 0.35], up: [0.4, 0.42], walk2: [0.42, 0.52], point: [0.52, 0.56],
+    walk3: [0.6, 0.67], hop: [0.67, 0.7], lower: [0.78, 0.86], drive: [0.86, 0.97],
   };
+  // Chapter 5 ("next chapter": helmet off, backpacking, certification, MBA).
+  // Chapters 1-4 play in the first S of the scroll; the journey plays in the rest.
+  const JOURNEY = true;
+  const S = 0.64;
+  for (const k in K) K[k] = K[k].map((v) => v * S);
+  stage.querySelectorAll('[data-journey]').forEach((el) => { el.hidden = false; });
+  const jq = (p) => (p - S) / (1 - S);
   const lerpAngle = (a, b, t) => { const dd = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; return a + dd * t; };
 
   const endAB = at(pathAB, pathAB.L), endBC = at(pathBC, pathBC.L), endCD = at(pathCD, pathCD.L);
@@ -515,6 +562,7 @@ async function init() {
   }
 
   function leaderState(p, R) {
+    if (JOURNEY && p >= S) return journeyLeader(jq(p));
     if (p < K.walk1[0]) return { pos: A_POS, rot: 0, pose: STAND, vest: false };
     if (p < K.walk1[1]) {
       const s = span(p, ...K.walk1) * pathAB.L, q = at(pathAB, s);
@@ -558,6 +606,7 @@ async function init() {
       if (follow) tt.lerp(lpos.clone().setY(Math.max(lpos.y, 0) + 0.8), 0.45 * Math.sin(Math.PI * t));
       return { t: tt, dir: a.dir.clone().lerp(b.dir, t).normalize(), dist: a.dist + (b.dist - a.dist) * t, need: a.need + (b.need - a.need) * t };
     };
+    if (JOURNEY && p >= S) return journeyCam(jq(p), lpos, blend);
     if (p < K.zoom[0]) return camA0;
     if (p < K.zoom[1]) return blend(camA0, camA, ease(span(p, ...K.zoom)), false);
     if (p < K.walk1[0]) return camA;
@@ -565,20 +614,215 @@ async function init() {
     if (p < K.walk2[0]) return camB;
     if (p < K.point[0]) return blend(camB, camC, ease(span(p, K.walk2[0], K.point[0])), true);
     if (p < K.walk3[0]) return camC;
-    if (p < K.walk3[1]) return blend(camC, camD1, ease(span(p, ...K.walk3)), true);
-    if (p < K.lower[1] - 0.02) return camD1;
-    return blend(camD1, camD2, ease(span(p, K.lower[1] - 0.02, K.drive[1])), false);
+    if (p < K.walk3[1]) return blend(camC, camD0, ease(span(p, ...K.walk3)), true);
+    // stay close on Sam through the hop and a beat in the boat, then pull back to show the ship and the drop
+    const zoomOut = [K.hop[1] + 0.02 * S, K.lower[0] + 0.05 * S];
+    if (p < zoomOut[0]) return camD0;
+    if (p < zoomOut[1]) return blend(camD0, camD1, ease(span(p, ...zoomOut)), false);
+    if (p < K.lower[1]) return camD1;
+    return blend(camD1, camD2, ease(span(p, K.lower[1], K.drive[1])), false);
   }
+
+  // ---------- chapter 5 preview: hang up the helmet, backpack the world, certification, MBA ----------
+  const H = V(-34, 0, -10);
+  const HOOK_POS = V(H.x, 0, H.z + 0.85), HOOK_PT = V(H.x, 1.6, H.z + 0.2); // same height/offset as the other hung helmets
+  const hookWall = new THREE.Mesh(mergeGeometries([
+    box(2.6, 2.7, 0.15, 0, 1.35, 0, 0x3a3a3a),
+    ...[-0.75, 0, 0.75].map((x) => colorize(new THREE.CylinderGeometry(0.035, 0.035, 0.22, 8).rotateX(Math.PI / 2).translate(x, 1.62, 0.18), 0x9a9a9a)),
+    ...helmetParts(0xd11f27, 0xf2c200, 0).map((g) => g.translate(-0.75, 1.6, 0.2)),
+    ...helmetParts(0x9a9a9a, 0x9a9a9a, 0).map((g) => g.translate(0.75, 1.6, 0.2)),
+  ]), vcMat);
+  hookWall.position.copy(H); hookWall.castShadow = true; scene.add(hookWall);
+  const plaque = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.5), new THREE.MeshBasicMaterial({ map: canvasTex(880, 200, (g, w, h) => {
+    g.fillStyle = '#1b1b1b'; g.fillRect(0, 0, w, h); g.strokeStyle = '#c9a13b'; g.lineWidth = 8; g.strokeRect(8, 8, w - 16, h - 16);
+    g.fillStyle = '#f2c200'; g.textAlign = 'center';
+    g.font = '600 58px Arial'; g.fillText('UNITED STATES NAVY', w / 2, 92);
+    g.font = '600 42px Arial'; g.fillText('2019 – 2024', w / 2, 155);
+  }) }));
+  plaque.position.set(H.x, 2.42, H.z + 0.09); scene.add(plaque);
+  const hungHelmet = new THREE.Mesh(mergeGeometries(helmetParts(0xf4f4f4, 0x1f6fe5, 0)), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.2 }));
+  hungHelmet.castShadow = true; hungHelmet.visible = false; scene.add(hungHelmet);
+
+  // Backpack and graduation cap live on the leader rig, hidden until needed.
+  const pack = new THREE.Mesh(mergeGeometries([
+    box(0.4, 0.52, 0.22, 0, 0.3, -0.27, 0x3c5a3a),
+    box(0.3, 0.2, 0.06, 0, 0.18, -0.4, 0x2f4a2e),
+    colorize(new THREE.CylinderGeometry(0.09, 0.09, 0.46, 12).rotateZ(Math.PI / 2).translate(0, 0.62, -0.27), 0xc9a13b),
+    // shoulder straps over the front of the chest (so the pack reads in the face-on close-up)
+    box(0.07, 0.5, 0.03, 0.11, 0.3, 0.145, 0x2f4a2e), box(0.07, 0.5, 0.03, -0.11, 0.3, 0.145, 0x2f4a2e),
+    box(0.07, 0.04, 0.42, 0.11, 0.56, -0.06, 0x2f4a2e), box(0.07, 0.04, 0.42, -0.11, 0.56, -0.06, 0x2f4a2e),
+  ]), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55 }));
+  pack.castShadow = true; pack.visible = false; pelvis.add(pack);
+  const packWhite = new THREE.Color(1, 1, 1), packBlack = new THREE.Color(0.1, 0.1, 0.1);
+  const gradCap = new THREE.Mesh(mergeGeometries([
+    colorize(new THREE.CylinderGeometry(0.19, 0.2, 0.12, 20).translate(0, -0.02, 0), 0x111111),
+    colorize(new THREE.BoxGeometry(0.56, 0.03, 0.56).rotateY(Math.PI / 4).translate(0, 0.055, 0), 0x111111),
+    colorize(new THREE.CylinderGeometry(0.008, 0.008, 0.26, 6).translate(0.36, -0.06, 0), 0xf2c200),
+    colorize(new THREE.SphereGeometry(0.03, 8, 6).translate(0.36, -0.2, 0), 0xf2c200),
+  ]), vcMat);
+  gradCap.visible = false; pelvis.add(gradCap);
+
+  // Germany is the only land on the map: the walk goes straight from the helmet hook to it, then on to the certificate.
+  const pinGeo = mergeGeometries([
+    colorize(new THREE.ConeGeometry(0.12, 0.5, 10).rotateX(Math.PI).translate(0, 0.45, 0), 0xd11f27),
+    colorize(new THREE.SphereGeometry(0.17, 12, 10).translate(0, 0.78, 0), 0xd11f27),
+  ]);
+  const G = V(-58, 0, -26);
+  {
+    const pts = [[0, .9], [.25, 1], [.45, .95], [.6, 1], [.75, .9], [.85, .75], [.9, .55], [1, .4], [.85, .25], [.9, .05], [.65, 0], [.45, .05], [.3, 0], [.15, .1], [.12, .3], [0, .45], [.05, .65]];
+    const sw = 4.4, shh = 5.6;
+    const sh = new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2((x - 0.5) * sw, (y - 0.5) * shh)));
+    const base = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 0.24, bevelEnabled: false }).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }));
+    base.position.copy(G); base.receiveShadow = true; scene.add(base);
+    const ring = new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2((x - 0.5) * sw * 1.07, (y - 0.5) * shh * 1.06)));
+    ring.holes.push(new THREE.Path(pts.map(([x, y]) => new THREE.Vector2((x - 0.5) * sw, (y - 0.5) * shh))));
+    const border = new THREE.Mesh(new THREE.ExtrudeGeometry(ring, { depth: 0.28, bevelEnabled: false }).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.6 }));
+    border.position.copy(G); scene.add(border);
+    const top = new THREE.ShapeGeometry(sh);
+    const pos = top.attributes.position, uv = top.attributes.uv;
+    for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / sw + 0.5, pos.getY(i) / shh + 0.5);
+    top.rotateX(-Math.PI / 2);
+    const flag = canvasTex(64, 96, (g) => { g.fillStyle = '#111'; g.fillRect(0, 0, 64, 32); g.fillStyle = '#dd0000'; g.fillRect(0, 32, 64, 32); g.fillStyle = '#ffce00'; g.fillRect(0, 64, 64, 32); });
+    const face = new THREE.Mesh(top, new THREE.MeshBasicMaterial({ map: flag }));
+    face.position.set(G.x, 0.25, G.z); scene.add(face);
+    const gPin = new THREE.Mesh(pinGeo, vcMat); gPin.scale.setScalar(1.6); gPin.position.set(G.x + 0.6, 0.24, G.z - 0.6); gPin.castShadow = true; scene.add(gPin);
+  }
+
+  // Certificate on an easel, in DRI International's navy and green
+  const CERT = V(-62, 0, -52), CERT_STAND = V(-59.2, 0, -50.5);
+  const certTex = canvasTex(1024, 720, (g, w, h) => {
+    const NAVY = '#00447f', GREEN = '#00a850';
+    g.fillStyle = '#fbfbf8'; g.fillRect(0, 0, w, h);
+    g.fillStyle = NAVY; g.fillRect(0, 0, w, 26); g.fillRect(0, h - 26, w, 26); g.fillRect(0, 0, 26, h); g.fillRect(w - 26, 0, 26, h);
+    g.strokeStyle = GREEN; g.lineWidth = 5; g.strokeRect(48, 48, w - 96, h - 96);
+    g.textAlign = 'center'; g.fillStyle = NAVY; g.font = '600 27px Arial'; g.fillText('DISASTER RECOVERY INSTITUTE INTERNATIONAL', w / 2, 128);
+    g.fillStyle = '#333'; g.font = 'italic 34px Georgia'; g.fillText('This certifies that', w / 2, 200);
+    g.fillStyle = '#111'; g.font = '64px Georgia'; g.fillText('Sam Quach', w / 2, 280);
+    g.fillStyle = '#333'; g.font = 'italic 30px Georgia'; g.fillText('is a', w / 2, 335);
+    g.fillStyle = NAVY; g.font = '600 50px Georgia'; g.fillText('Certified Business', w / 2, 410); g.fillText('Continuity Professional', w / 2, 470);
+    g.fillStyle = GREEN; g.fillRect(w / 2 - 90, 500, 180, 5);
+    g.fillStyle = '#444'; g.font = '28px Arial'; g.fillText('June 2025', w / 2, 560);
+    g.fillStyle = GREEN; g.beginPath(); g.arc(w - 170, h - 150, 62, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = NAVY; g.lineWidth = 8; g.beginPath(); g.arc(w - 170, h - 150, 50, 0, Math.PI * 2); g.stroke();
+  });
+  const certFrame = new THREE.Mesh(mergeGeometries([
+    box(4.5, 3.25, 0.14, 0, 2.35, 0, 0x6b4a2b), box(0.12, 1.4, 0.12, -1.6, 0.7, 0.2, 0x6b4a2b), box(0.12, 1.4, 0.12, 1.6, 0.7, 0.2, 0x6b4a2b), box(0.12, 2.6, 0.12, 0, 1.2, -0.7, 0x6b4a2b),
+  ]), vcMat);
+  certFrame.position.copy(CERT); certFrame.castShadow = true; scene.add(certFrame);
+  const certFace = new THREE.Mesh(new THREE.PlaneGeometry(4.25, 2.99), new THREE.MeshBasicMaterial({ map: certTex }));
+  certFace.position.set(CERT.x, 2.35, CERT.z + 0.08); scene.add(certFace);
+
+  // University building with an MBA banner
+  const M = V(-46, 0, -61), MBA_STAND = V(-46, 0, -57.3);
+  const stone = 0xcfcac0;
+  const uni = new THREE.Mesh(mergeGeometries([
+    box(9.4, 0.3, 3.4, 0, 0.15, 0.4, stone), box(8.6, 0.3, 2.8, 0, 0.45, 0.2, stone),
+    box(8.6, 4.6, 0.5, 0, 2.9, -1.0, 0xb9b3a8),
+    ...[-3.4, -1.7, 0, 1.7, 3.4].map((x) => colorize(new THREE.CylinderGeometry(0.26, 0.3, 3.7, 16).translate(x, 2.45, 0.6), stone)),
+    box(9.0, 0.6, 1.8, 0, 4.6, 0.0, stone),
+    box(1.6, 2.6, 0.1, 0, 1.9, -0.72, 0x2a2a2a),
+  ]), vcMat);
+  uni.position.copy(M); uni.castShadow = true; uni.receiveShadow = true; scene.add(uni);
+  const banner = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 0.55), new THREE.MeshBasicMaterial({ map: canvasTex(720, 110, (g, w, h) => {
+    g.fillStyle = '#d11f27'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = '600 64px Georgia'; g.textAlign = 'center'; g.fillText('MBA', w / 2, 78);
+  }) }));
+  banner.position.set(M.x, 4.6, M.z + 0.91); scene.add(banner);
+
+  const HANG = { ...NEUTRAL, shPx: -2.5, shPz: 0.15, elPx: -0.5 };
+  const worldPath = mkPath([HOOK_POS, V(-38, 0, -14), G]);
+  const sG = worldPath.L; // distance at Germany
+  const certPath = mkPath([G, V(-61, 0, -40), CERT_STAND]);
+  const mbaPath = mkPath([CERT_STAND, V(-52, 0, -55), MBA_STAND]);
+
+  // Chapter 5 layout (q = 0..1):
+  //   0.00-0.29  helmet onto the peg, then backpack on
+  //   0.29-0.52  walk to Germany          0.52-0.62  pause in Germany
+  //   0.62-0.81  on to the certificate    0.81-0.90  MBA        0.90-1.00  close-up, speech bubble
+  const END = 0.90;
+  const PACKING = { ...NEUTRAL, shPx: 0.7, shPz: 0.35, elPx: -2.0, shNx: 0.7, shNz: -0.35, elNx: -2.0 };
+  const TURN = 1.4; // metres of walking over which the figure turns into a new heading
+
+  function journeyLeader(q) {
+    const base = { helmetOff: true, pack: 1, vest: false, cap: 0 };
+    if (q < 0.03) return { pos: HOOK_POS, rot: Math.PI, pose: NEUTRAL, helmetOff: false, pack: 0 };
+    if (q < 0.19) {
+      // reach up, lift the helmet off, hang it on the peg
+      const t = span(q, 0.03, 0.17);
+      const pose = t < 0.45 ? mixPose(NEUTRAL, HANG, ease(t / 0.45)) : mixPose(HANG, NEUTRAL, ease((t - 0.45) / 0.55));
+      const off = t >= 0.3;
+      const head = V(HOOK_POS.x, 1.75, HOOK_POS.z);
+      const travel = ease((t - 0.3) / 0.45);
+      // arc up and over the head before coming down onto the peg, so it never passes through the head
+      const lift = V((head.x + HOOK_PT.x) / 2, 2.35, (head.z + HOOK_PT.z) / 2);
+      const helmetPos = off ? head.clone().lerp(lift, travel).lerp(lift.clone().lerp(HOOK_PT, travel), travel) : null;
+      return { pos: HOOK_POS, rot: Math.PI, pose, helmetOff: off, helmetPos, helmetTurn: travel, pack: 0 };
+    }
+    if (q < 0.21) return { pos: HOOK_POS, rot: Math.PI, pose: NEUTRAL, helmetOff: true, pack: 0 };
+    if (q < 0.29) {
+      // reach back for the straps and shoulder the backpack
+      const t = span(q, 0.21, 0.29);
+      const pose = t < 0.5 ? mixPose(NEUTRAL, PACKING, ease(t / 0.5)) : mixPose(PACKING, NEUTRAL, ease((t - 0.5) / 0.5));
+      return { pos: HOOK_POS, rot: Math.PI, pose, helmetOff: true, pack: ease(span(q, 0.22, 0.27)) };
+    }
+    const walking = (path, s, fromRot, fromPose, d0) => {
+      const w = at(path, s);
+      return { ...base, pos: w.pos, rot: lerpAngle(fromRot, w.rot, ease(d0 / TURN)), pose: mixPose(fromPose, walk(s / STRIDE * Math.PI), ease(d0 / 1.0)) };
+    };
+    if (q < 0.52) { const s = span(q, 0.29, 0.52) * sG; return walking(worldPath, s, Math.PI, NEUTRAL, s); }
+    if (q < 0.62) {
+      const t = ease(span(q, 0.52, 0.555));
+      return { ...base, pos: G.clone(), rot: lerpAngle(at(worldPath, sG - 0.01).rot, 0.2, t), pose: mixPose(walk(sG / STRIDE * Math.PI), STAND, t) };
+    }
+    if (q < 0.75) { const s = span(q, 0.62, 0.75) * certPath.L; return walking(certPath, s, 0.2, STAND, s); }
+    const endC = at(certPath, certPath.L), phC = certPath.L / STRIDE * Math.PI;
+    if (q < 0.81) { const t = ease(span(q, 0.75, 0.78)); return { ...base, pos: CERT_STAND, rot: lerpAngle(endC.rot, -0.35, t), pose: mixPose(walk(phC), STAND, t) }; }
+    if (q < 0.86) { const s = span(q, 0.81, 0.86) * mbaPath.L; return walking(mbaPath, s, -0.35, STAND, s); }
+    const endM = at(mbaPath, mbaPath.L), phM = mbaPath.L / STRIDE * Math.PI;
+    if (q < END) { const t = ease(span(q, 0.86, 0.88)); return { ...base, pos: MBA_STAND, rot: lerpAngle(endM.rot, 0, t), pose: mixPose(walk(phM), STAND, t), cap: ease(span(q, 0.87, 0.9)) }; }
+    // close-up, face on to the camera; the backpack (straps visible from the front) turns black the moment the cap lands
+    return { ...base, pos: MBA_STAND, rot: 0.2, pose: STAND, cap: 1, packDark: 1, speech: q > END + 0.055 };
+  }
+
+  const camE1 = { t: V(H.x, 1.5, H.z + 0.5), dir: V(0.5, 0.32, 0.8).normalize(), dist: 6.5, need: 3.6 };
+  const worldCam = (lpos, zoom) => ({ t: lpos.clone().setY(0.6), dir: V(0.1, 0.78, 0.62).normalize(), dist: 22 - 10 * zoom, need: 14 - 7 * zoom });
+  const camE3 = { t: V(CERT.x + 1.3, 1.9, CERT.z + 1.0), dir: V(0.3, 0.3, 0.9).normalize(), dist: 10, need: 7.5 };
+  const camE4 = { t: V(M.x, 2.4, M.z + 2.6), dir: V(0.25, 0.3, 0.92).normalize(), dist: 15, need: 11 };
+  const camE5 = { t: V(MBA_STAND.x, 1.3, MBA_STAND.z), dir: V(0.2, 0.16, 0.97).normalize(), dist: 5.0, need: 2.2 };
+  function journeyCam(q, lpos, blend) {
+    if (q < 0.29) return camE1;
+    if (q < 0.36) return blend(camE1, worldCam(lpos, 0), ease(span(q, 0.29, 0.36)), false);
+    if (q < 0.7) return worldCam(lpos, ease(span(q, 0.48, 0.53)) * (1 - ease(span(q, 0.6, 0.65))));
+    if (q < 0.77) return blend(worldCam(lpos, 0), camE3, ease(span(q, 0.7, 0.77)), false);
+    if (q < 0.81) return camE3;
+    if (q < 0.86) return blend(camE3, camE4, ease(span(q, 0.81, 0.86)), true);
+    if (q < END) return camE4;
+    return blend(camE4, camE5, ease(span(q, END, END + 0.04)), false);
+  }
+  const speechEl = stage.querySelector('.speech');
+  const fadeEl = document.createElement('div');
+  fadeEl.style.cssText = 'position:absolute;inset:0;background:#0e0e0e;pointer-events:none;opacity:0;';
+  stage.insertBefore(fadeEl, stage.querySelector('.story-overlay'));
 
   // ---------- callouts ----------
   const callouts = {
-    ff: { anchor: V(-3.8, 1.8, 4.0), range: [0, 0.07] },
-    surge: { anchor: V(8, 1.8, 19), range: [0.14, 0.21] },
-    audit: { anchor: V(B.x - 0.05, 0.95, B.z + 0.05), range: [0.35, 0.43] },
-    train: { anchor: V(C.x + 1.2, 2.2, C.z - 3.25), range: [0.59, 0.67] },
+    ff: { anchor: V(0, 1.75, 2.0), range: [0, 0.1] },
+    surge: { anchor: V(8, 1.8, 19), range: [0.17, 0.23] },
+    audit: { anchor: V(B.x - 0.05, 0.95, B.z + 0.05), range: [0.35, 0.41] },
+    train: { anchor: V(C.x + 1.2, 2.2, C.z - 3.25), range: [0.56, 0.62] },
     sar: { anchor: null, range: [0.8, 1.01] },
     mob: { anchor: V(MOB.x, SEA_Y + 0.6, MOB.z), range: [0.9, 1.01] },
   };
+  {
+    for (const k in callouts) callouts[k].range = callouts[k].range.map((v) => Math.min(v * S, S - 0.004));
+    const jr = (a, b) => [S + a * (1 - S), S + b * (1 - S)];
+    Object.assign(callouts, {
+      pack: { anchor: () => leader.position.clone().setY(1.3), range: jr(0.2, 0.29) },
+      world: { anchor: () => leader.position.clone().setY(1.9), range: jr(0.33, 0.49) },
+      germany: { anchor: V(G.x, 0.4, G.z), range: jr(0.51, 0.63), noArrow: true },
+      cert: { anchor: V(CERT.x, 2.6, CERT.z + 0.1), range: jr(0.765, 0.82) },
+      mba: { anchor: V(M.x, 4.6, M.z + 0.95), range: jr(0.875, END) },
+    });
+  }
   for (const k in callouts) {
     callouts[k].el = stage.querySelector(`.callout[data-key="${k}"]`);
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -596,9 +840,10 @@ async function init() {
       if (!c.el) continue;
       const on = introDone && p >= c.range[0] && p < c.range[1];
       c.el.classList.toggle('on', on);
-      c.g.style.opacity = on ? 1 : 0;
-      if (!on) continue;
-      const pr = (c.anchor || ribAnchor).clone().project(camera);
+      c.g.style.opacity = on && !c.noArrow ? 1 : 0;
+      if (!on || c.noArrow) continue;
+      const anchor = typeof c.anchor === 'function' ? c.anchor() : (c.anchor || ribAnchor);
+      const pr = anchor.clone().project(camera);
       const tx = (pr.x + 1) / 2 * W, ty = (1 - pr.y) / 2 * H;
       const lr = c.el.getBoundingClientRect();
       if (!Number.isFinite(tx) || !Number.isFinite(ty) || !lr.width) { c.g.style.opacity = 0; continue; }
@@ -628,10 +873,29 @@ async function init() {
 
     crewPos.forEach((c, i) => {
       const s = c.surge ? ease((p - K.zoom[0] - c.row * 0.0075) / 0.025) : ease((introT - 0.2 - c.delay) / 0.45);
-      d.position.set(c.x, 0, c.z); d.rotation.set(0, Math.PI, 0); d.scale.setScalar(Math.max(s, 0.0001)); d.updateMatrix();
+      const T = teamInfo[c.team];
+      // faster: the whole move takes 0.06 of the scroll; teams first pull together, then travel
+      const raw = span(p, K.walk1[0] + T.delay, K.walk1[0] + 0.06 + T.delay);
+      const m = ease(raw);
+      const gather = ease(raw / 0.35);
+      const off = CLUSTER[c.k] || [0, 0];
+      const hx = c.x + (T.cx + off[0] - c.x) * gather, hz = c.z + (T.cz + off[1] - c.z) * gather;
+      const bob = raw > 0 && raw < 1 ? 0.06 * Math.abs(Math.sin(raw * 20 + c.team)) : 0;
+      d.position.set(hx + T.dx * m, bob, hz + T.dz * m);
+      d.rotation.set(0, raw > 0 ? lerpAngle(Math.PI, T.rot, Math.min(raw * 5, 1)) : Math.PI, 0);
+      d.scale.setScalar(Math.max(s, 0.0001)); d.updateMatrix();
       crew.setMatrixAt(i, d.matrix);
+      // arms swing in opposition while the team is on the move
+      const moving = raw > 0 && raw < 1 ? Math.min(raw * 8, (1 - raw) * 8, 1) : 0;
+      const swing = 0.55 * moving * Math.sin(raw * 26 + c.team * 1.7);
+      for (const a of arms) {
+        const sd = a.userData.side;
+        mArm.makeTranslation(0.27 * sd, 1.36, 0).multiply(mTmp.makeRotationX(swing * sd));
+        a.setMatrixAt(i, mTmp.copy(d.matrix).multiply(mArm));
+      }
     });
     crew.instanceMatrix.needsUpdate = true;
+    arms.forEach((a) => { a.instanceMatrix.needsUpdate = true; });
 
     if (p > K.walk3[0] - 0.02) updateSea(seaT);
     const R = ribState(p, seaT);
@@ -653,6 +917,15 @@ async function init() {
     const L = leaderState(p, R);
     leader.position.copy(L.pos); leader.rotation.y = L.rot; applyPose(L.pose);
     vest.visible = !!L.vest;
+    lHelmet.visible = !L.helmetOff;
+    pack.visible = !!L.pack; pack.scale.setScalar(Math.max(L.pack || 0, 0.0001));
+    pack.material.color.copy(packWhite).lerp(packBlack, L.packDark || 0);
+    gradCap.visible = (L.cap || 0) > 0; gradCap.position.y = 1.0 + (1 - (L.cap || 0)) * 1.6;
+    if (JOURNEY && p >= S) {
+      hungHelmet.visible = !!L.helmetOff;
+      hungHelmet.position.copy(L.helmetPos || HOOK_PT); hungHelmet.rotation.y = L.helmetPos ? Math.PI * (1 - (L.helmetTurn || 0)) : 0;
+    } else hungHelmet.visible = false;
+    fadeEl.style.opacity = JOURNEY ? Math.max(0, 1 - Math.abs(p - S) / 0.012) : 0;
 
     const cs = camFor(p, L.pos);
     const vfov = camera.aspect < 1 ? 46 : 30;
@@ -662,7 +935,18 @@ async function init() {
     camera.position.copy(cs.t).addScaledVector(cs.dir, dist);
     camera.lookAt(cs.t);
     camera.updateProjectionMatrix();
+    camera.updateMatrixWorld();
     scene.fog.near = dist * 0.9; scene.fog.far = dist * 2.4;
+    if (speechEl) {
+      speechEl.classList.toggle('on', !!L.speech);
+      if (L.speech) {
+        const hp = leader.position.clone().setY(2.1).project(camera);
+        const W = stage.clientWidth, Hh = stage.clientHeight, bw = speechEl.offsetWidth, bh = speechEl.offsetHeight;
+        const x = Math.min(Math.max((hp.x + 1) / 2 * W, 16 + bw * 0.12), W - bw * 0.88 - 16);
+        speechEl.style.left = x + 'px';
+        speechEl.style.top = Math.max((1 - hp.y) / 2 * Hh, bh + 90) + 'px';
+      }
+    }
 
     const sh = Math.min(Math.max(dist * 0.55, 5), 32);
     sun.target.position.copy(cs.t);
@@ -672,10 +956,34 @@ async function init() {
 
     renderer.render(scene, camera);
     drawCallouts(p, introT > 2.0);
-    const ch = p < K.walk1[1] ? 0 : p < K.walk2[1] ? 1 : p < K.walk3[0] + 0.03 ? 2 : 3;
-    chapterEls.forEach((el, i) => el.classList.toggle('on', i === ch));
-    hint.classList.toggle('off', p > 0.02);
+    const ch = JOURNEY && p >= S ? 4 : p < K.walk1[1] ? 0 : p < K.walk2[1] ? 1 : p < K.walk3[0] + 0.03 ? 2 : 3;
+    chapterEls.forEach((el, i) => { el.classList.toggle('on', i === ch); el.setAttribute('aria-current', i === ch ? 'step' : 'false'); });
+    if (progressBar) progressBar.style.width = (p * 100).toFixed(2) + '%';
+    updateHint(p, ch);
   }
+
+  // "Keep scrolling" prompt: shown at the start, then again whenever the reader pauses mid-story,
+  // naming the next chapter so it's clear the story isn't over yet.
+  let lastScroll = 0;
+  function updateHint(p, ch) {
+    if (p <= 0.02) { hintText.textContent = 'Keep scrolling to play the story'; hint.classList.remove('off'); return; }
+    const idle = performance.now() - lastScroll > 1300;
+    if (!idle || p > 0.985) { hint.classList.add('off'); return; }
+    const next = chapterEls[ch + 1];
+    hintText.textContent = ch === 3 ? 'Keep scrolling · One more chapter'
+      : next ? `Keep scrolling · Next: ${next.textContent.replace(/^\s*\d+\s*/, '')}` : 'Keep scrolling · Almost there';
+    hint.classList.remove('off');
+  }
+  setInterval(() => { if (!gliding) updateHint(progress, chapterOf(progress)); }, 400);
+  const chapterOf = (p) => (p >= S ? 4 : p < K.walk1[1] ? 0 : p < K.walk2[1] ? 1 : p < K.walk3[0] + 0.03 ? 2 : 3);
+
+  // Chapter tabs jump the story to the start of each chapter
+  const chapterStart = [0.001, K.sit[1] + 0.004, K.point[0] + 0.004, K.walk3[0] + 0.032, S + 0.016];
+  chapterEls.forEach((el, i) => el.addEventListener('click', () => {
+    const total = story.offsetHeight - stage.offsetHeight;
+    const top = story.getBoundingClientRect().top + scrollY - 58 + chapterStart[i] * total;
+    scrollTo({ top: Math.ceil(top), behavior: 'instant' });
+  }));
 
   function resize() {
     const W = stage.clientWidth, H = stage.clientHeight;
@@ -685,19 +993,24 @@ async function init() {
     frame();
   }
 
-  let queued = false;
+  // Eased scrolling: the story glides toward the scroll position over several frames instead of jumping
+  // a whole mouse-wheel step at once. Big jumps (e.g. "Skip to experience") snap straight there.
+  let target = 0, gliding = false;
+  const glide = () => {
+    const diff = target - progress;
+    if (Math.abs(diff) < 0.00004 || Math.abs(diff) > 0.25 || reduce) progress = target;
+    else progress += diff * 0.1;
+    frame();
+    if (progress !== target) requestAnimationFrame(glide); else gliding = false;
+  };
   const onScroll = () => {
-    if (queued) return;
-    queued = true;
-    requestAnimationFrame(() => {
-      queued = false;
-      const p = progressFromScroll();
-      if (p !== progress) { progress = p; frame(); }
-    });
+    lastScroll = performance.now();
+    target = progressFromScroll();
+    if (!gliding && target !== progress) { gliding = true; requestAnimationFrame(glide); }
   };
 
   updateSea(0);
-  progress = progressFromScroll();
+  progress = target = progressFromScroll();
   resize();
   new ResizeObserver(resize).observe(stage);
   addEventListener('scroll', onScroll, { passive: true });

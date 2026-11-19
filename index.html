@@ -9,9 +9,10 @@
   <script>
     try { var t = localStorage.getItem('theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) {}
   </script>
-  <link rel="stylesheet" href="styles.css">
+  <!-- Bump ?v= on every update so browsers fetch the new files instead of a cached copy -->
+  <link rel="stylesheet" href="styles.css?v=2026-11-18j">
   <script type="importmap">{ "imports": { "three": "./js/vendor/three.module.min.js" } }</script>
-  <script type="module" src="js/story.js"></script>
+  <script type="module" src="js/story.js?v=2026-11-18j"></script>
 </head>
 <body>
 
@@ -41,10 +42,15 @@
           second-line risk assessments, compliance self-audits, and readiness inspections, and leading
           emergency response and crisis management in 24/7 operations.
         </p>
+        <p class="frameworks-strip"><span>Familiar with</span> <b>DORA</b> <b>ISO 22301</b> <b>NIS2</b></p>
         <div class="actions">
           <a class="btn btn-red" href="mailto:Sam.t.q@protonmail.com?subject=Business%20Continuity%20opportunity">Email me</a>
           <a class="btn btn-linkedin" href="https://www.linkedin.com/in/samtquach" target="_blank" rel="noopener">LinkedIn</a>
         </div>
+        <a class="scroll-cue" href="#story">
+          <span>Scroll to see my work in 3D</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6l5 5 5-5M7 13l5 5 5-5"/></svg>
+        </a>
         <dl class="facts">
           <div><dt>Availability</dt><dd>From July 2027</dd></div>
           <div><dt>Relocating to</dt><dd>Germany (preferred: Hamburg, Frankfurt, Munich)</dd></div>
@@ -71,14 +77,23 @@
           <div class="callout" data-key="train">Training &amp;<br>exercises</div>
           <div class="callout" data-key="sar">Search &amp;<br>rescue</div>
           <div class="callout" data-key="mob">Man<br>overboard</div>
+          <div class="callout" data-key="pack" data-journey hidden>Backpack on</div>
+          <div class="callout" data-key="world" data-journey hidden>28 countries<br>8 months</div>
+          <div class="callout" data-key="germany" data-journey hidden>Germany</div>
+          <div class="callout" data-key="cert" data-journey hidden>Certified Business<br>Continuity Professional</div>
+          <div class="callout" data-key="mba" data-journey hidden>MBA<br>2025–2027</div>
+          <div class="speech" data-journey hidden lang="de">Ich möchte nach Deutschland ziehen!</div>
         </div>
-        <ol class="chapters" aria-hidden="true">
-          <li data-ch="0"><span>01</span> Emergency response</li>
-          <li data-ch="1"><span>02</span> Second-line oversight</li>
-          <li data-ch="2"><span>03</span> Training &amp; exercises</li>
-          <li data-ch="3"><span>04</span> Search &amp; rescue</li>
-        </ol>
-        <div class="scroll-hint" aria-hidden="true">Scroll<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
+        <nav class="chapters" aria-label="Story chapters">
+          <span class="chapters-label">Jump to</span>
+          <button type="button" data-ch="0"><span>01</span> Emergency response</button>
+          <button type="button" data-ch="1"><span>02</span> Second-line oversight</button>
+          <button type="button" data-ch="2"><span>03</span> Training &amp; exercises</button>
+          <button type="button" data-ch="3"><span>04</span> Search &amp; rescue</button>
+          <button type="button" data-ch="4"><span>05</span> Next chapter</button>
+        </nav>
+        <div class="story-progress" aria-hidden="true"><i></i></div>
+        <div class="scroll-hint" aria-hidden="true"><span class="mouse"><i></i></span><span class="hint-text">Keep scrolling to play the story</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></div>
         <a class="skip-story" href="#experience">Skip to experience<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6l5 5 5-5M7 13l5 5 5-5"/></svg></a>
       </div>
     </section>
@@ -125,7 +140,7 @@
                 <h4>United States Navy</h4>
                 <p class="tl-where">Sasebo, Japan and Norfolk, USA</p>
               </div>
-              <span class="tl-node" aria-hidden="true"></span>
+              <span class="tl-node" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M12 7v14M5 13H3a9 9 0 0 0 18 0h-2M8 10h8"/></svg></span>
               <div class="tl-right">
                 <div class="tl-stats">
                   <div><b>175</b><span>emergency responders led</span></div>
@@ -143,10 +158,10 @@
                 <h4>Professional development and travel</h4>
                 <p class="tl-where">Europe, Asia, Africa and North America</p>
               </div>
-              <span class="tl-node" aria-hidden="true"></span>
+              <span class="tl-node" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
               <div class="tl-right">
                 <div class="tl-stats">
-                  <div><b>June 2025</b><span>Certified Business Continuity Professional, DRI International</span></div>
+                  <div><b>June 2025</b><span>Certified Business Continuity Professional, Disaster Recovery Institute International</span></div>
                   <div><b>28</b><span>countries in 8 months, solo</span></div>
                 </div>
                 <ol class="country-list" aria-label="The 28 countries">
@@ -170,9 +185,10 @@
                 <h4>MBA, Northeastern University</h4>
                 <p class="tl-where">Boston, USA</p>
               </div>
-              <span class="tl-node" aria-hidden="true"></span>
+              <span class="tl-node" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5M22 9v6"/></svg></span>
               <div class="tl-right">
                 <div class="tl-stats">
+                  <div><b>3rd</b><span>place, RTX (Raytheon) National Business Case Competition</span></div>
                   <div><b>2nd</b><span>place, Microsoft AI Hackathon</span></div>
                 </div>
               </div>
@@ -184,7 +200,7 @@
                 <h4>RTX (Raytheon)</h4>
                 <p class="tl-where">International Supply Chain Procurement</p>
               </div>
-              <span class="tl-node" aria-hidden="true"></span>
+              <span class="tl-node" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg></span>
               <div class="tl-right">
                 <div class="tl-stats">
                   <div><b>125</b><span>third-party suppliers screened for due diligence</span></div>
@@ -200,7 +216,7 @@
                 <h4>AI Makerspace, Northeastern + Microsoft</h4>
                 <p class="tl-where">Working Student, AI Support</p>
               </div>
-              <span class="tl-node" aria-hidden="true"></span>
+              <span class="tl-node" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg></span>
               <div class="tl-right">
                 <p class="tl-roles">Coaching students on AI tools at the AI Support Hub and in workshops</p>
               </div>
@@ -212,7 +228,7 @@
                 <h4>Germany</h4>
                 <p class="tl-where">Hamburg · Frankfurt · Munich</p>
               </div>
-              <span class="tl-node" aria-hidden="true"></span>
+              <span class="tl-node" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
               <div class="tl-right">
                 <div class="tl-stats">
                   <div><b>Next</b><span>Business Continuity Manager</span></div>
@@ -221,71 +237,6 @@
             </li>
           </ol>
         </div>
-
-        <article class="job">
-          <header class="job-head">
-            <div>
-              <h3>United States Navy</h3>
-              <p class="job-place">Sasebo, Japan and Norfolk, USA</p>
-            </div>
-            <p class="job-dates">May 2019 – May 2024</p>
-          </header>
-
-          <div class="role">
-            <h4>Emergency Response and Business Continuity Manager</h4>
-            <ul>
-              <li>Led and trained a 175-person firefighting and emergency response team during real emergencies, setting response priorities and coordinating multiple teams in parallel</li>
-              <li>Planned and led the largest emergency preparedness certification in the organization’s history with 8 outside fire departments, scoring 95%</li>
-              <li>Identified a key-person dependency risk (55% turnover in critical qualifications) and led a 12-month mitigation project with milestone tracking</li>
-            </ul>
-          </div>
-
-          <div class="role">
-            <h4>Operations and Training Manager <span class="note">held concurrently</span></h4>
-            <ul>
-              <li>Directed operations of a €4.2B facility with 5,000 personnel and €10M in equipment</li>
-              <li>Ran a 24/7 operations center, escalating threats and releasing time-critical incident reports</li>
-              <li>Designed 5 exercises ranked #1 of 22 units and led 25 security drills rated outstanding</li>
-              <li>Wrote lesson plans, tabletop exercises, and drills as lead instructor, certifying 48 staff</li>
-            </ul>
-          </div>
-
-          <div class="role">
-            <h4>Security and Privacy Compliance Manager <span class="note">held concurrently</span></h4>
-            <ul>
-              <li>Conducted risk assessments and physical security inspections, verifying daily protocol compliance</li>
-              <li>Managed security access and privacy compliance, including self-audits and breach reporting</li>
-              <li>Served on certification boards and tracked remediation of findings</li>
-            </ul>
-          </div>
-        </article>
-
-        <article class="job job-compact">
-          <header class="job-head">
-            <div>
-              <h3>RTX (Raytheon)</h3>
-              <p class="job-role">International Supply Chain Procurement Intern</p>
-            </div>
-            <p class="job-dates">May 2026 – Aug 2026 · Andover, USA</p>
-          </header>
-          <ul>
-            <li>Performed due diligence compliance screening for 125 third-party and international suppliers</li>
-            <li>Monitored supplier health for 638 Middle East and North Africa suppliers with €20.6M in purchase orders, escalating risks before they disrupted delivery</li>
-          </ul>
-        </article>
-
-        <article class="job job-compact">
-          <header class="job-head">
-            <div>
-              <h3>AI Makerspace @ Northeastern University + Microsoft</h3>
-              <p class="job-role">Working Student, AI Support</p>
-            </div>
-            <p class="job-dates">Oct 2026 – Present · Boston, USA</p>
-          </header>
-          <ul>
-            <li>Teach students to troubleshoot and get more out of AI tools at the AI Support Hub and in workshops</li>
-          </ul>
-        </article>
       </div>
     </section>
 
@@ -297,20 +248,20 @@
             <h3 class="sub">Certifications</h3>
             <div class="cred">
               <p class="cred-title">Certified Business Continuity Professional</p>
-              <p class="cred-meta">DRI International · June 2025</p>
+              <p class="cred-meta">Disaster Recovery Institute International · June 2025</p>
             </div>
             <div class="cred">
               <p class="cred-title">CompTIA Security+</p>
               <p class="cred-meta">CompTIA · January 2024</p>
             </div>
-            <p class="frameworks"><strong>Frameworks:</strong> Familiar with ISO 22301, DORA, and MaRisk</p>
+            <p class="frameworks"><strong>Frameworks:</strong> Familiar with DORA, ISO 22301, NIS2, and MaRisk</p>
           </div>
           <div>
             <h3 class="sub">Education</h3>
             <div class="cred">
               <p class="cred-title">Master of Business Administration (MBA)</p>
               <p class="cred-meta">Northeastern University, Boston · Sep 2025 – May 2027 (expected)</p>
-              <p class="cred-note">2nd Place, Microsoft AI Hackathon</p>
+              <p class="cred-note">3rd Place, RTX (Raytheon) National Business Case Competition · 2nd Place, Microsoft AI Hackathon</p>
             </div>
             <div class="cred">
               <p class="cred-title">Bachelor of Science and Arts (BSA), Biology</p>
@@ -342,6 +293,10 @@
     </section>
 
   </main>
+
+  <footer class="site-footer">
+    <p class="built-with">Designed using Claude Code</p>
+  </footer>
 
   <script>
     (function () {
